@@ -1,104 +1,48 @@
-#include "main.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h> // Add this header for strerror
 
-char *allocate_buffer(char *file);
-void close_file_descriptor(int fd);
+#define BUF_SIZE 1024
 
-/**
- * allocate_buffer - Allocates a buffer of size 1024 bytes.
- * @file: The name of the file for which the buffer is being allocated.
- *
- * Return: A pointer to the newly allocated buffer.
- */
-char *allocate_buffer(char *file)
-{
-	char *buffer;
-
-	buffer = malloc(sizeof(char) * 1024);
-
-	if (buffer == NULL)
-	{
-		dprintf(STDERR_FILENO,
-			"Error: Failed to allocate buffer for %s\n", file);
-		exit(99);
-	}
-
-	return (buffer);
+void print_error(const char *msg, const char *file_name, const char *error_msg) {
+    dprintf(STDERR_FILENO, msg, file_name, error_msg); // Updated argument list
+    exit(EXIT_FAILURE);
 }
 
-/**
- * close_file_descriptor - Closes a file descriptor.
- * @fd: The file descriptor to be closed.
- */
-void close_file_descriptor(int fd)
-{
-	int result;
+int main(int argc, char *argv[]) {
+    int fd_from, fd_to;
+    ssize_t bytes_read, bytes_written;
+    char buffer[BUF_SIZE];
 
-	result = close(fd);
+    if (argc != 3) {
+        dprintf(STDERR_FILENO, "Usage: %s file_from file_to\n", argv[0]);
+        exit(97);
+    }
 
-	if (result == -1)
-	{
-		dprintf(STDERR_FILENO, "Error: Failed to close file descriptor %d\n", fd);
-		exit(100);
-	}
-}
+    fd_from = open(argv[1], O_RDONLY);
+    if (fd_from == -1)
+        print_error("Error: Can't read from file %s: %s\n", argv[1], strerror(errno));
 
-/**
- * main - Copies the contents from one file to another.
- * @argc: The number of arguments passed to the program.
- * @argv: An array of pointers to the arguments.
- *
- * Return: 0 on success.
- *
- * Description: Exits with exit codes:
- *   97 if the argument count is incorrect.
- *   98 if file_from does not exist or cannot be read.
- *   99 if file_to cannot be created or written to.
- *   100 if file_to or file_from cannot be closed.
- */
-int main(int argc, char *argv[])
-{
-	int file_from, file_to, bytes_read, bytes_written;
-	char *buffer;
+    fd_to = open(argv[2], O_WRONLY | O_CREAT | O_TRUNC, 0664);
+    if (fd_to == -1)
+        print_error("Error: Can't write to %s: %s\n", argv[2], strerror(errno));
 
-	if (argc != 3)
-	{
-		dprintf(STDERR_FILENO, "Usage: cp file_from file_to\n");
-		exit(97);
-	}
+    while ((bytes_read = read(fd_from, buffer, BUF_SIZE)) > 0) {
+        bytes_written = write(fd_to, buffer, bytes_read);
+        if (bytes_written == -1)
+            print_error("Error: Can't write to %s: %s\n", argv[2], strerror(errno));
+    }
 
-	buffer = allocate_buffer(argv[2]);
-	file_from = open(argv[1], O_RDONLY);
-	bytes_read = read(file_from, buffer, 1024);
-	file_to = open(argv[2], O_CREAT | O_WRONLY | O_TRUNC, 0664);
+    if (bytes_read == -1)
+        print_error("Error: Can't read from file %s: %s\n", argv[1], strerror(errno));
 
-	do {
-		if (file_from == -1 || bytes_read == -1)
-		{
-			dprintf(STDERR_FILENO,
-				"Error: Failed to read from file %s\n", argv[1]);
-			free(buffer);
-			exit(98);
-		}
+    if (close(fd_from) == -1)
+        print_error("Error: Can't close fd %d: %s\n", fd_from, strerror(errno));
 
-		bytes_written = write(file_to, buffer, bytes_read);
-		if (file_to == -1 || bytes_written == -1)
-		{
-			dprintf(STDERR_FILENO,
-				"Error: Failed to write to file %s\n", argv[2]);
-			free(buffer);
-			exit(99);
-		}
+    if (close(fd_to) == -1)
+        print_error("Error: Can't close fd %d: %s\n", fd_to, strerror(errno));
 
-		bytes_read = read(file_from, buffer, 1024);
-		file_to = open(argv[2], O_WRONLY | O_APPEND);
-
-	} while (bytes_read > 0);
-
-	free(buffer);
-	close_file_descriptor(file_from);
-	close_file_descriptor(file_to);
-
-	return (0);
+    return EXIT_SUCCESS;
 }
