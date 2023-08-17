@@ -1,39 +1,30 @@
-#include <stdio.h>
-#include <stddef.h>
+#include "lists.h"
 
-typedef struct dlistint_t {
-    int data;
-    struct dlistint_t *prev;
-    struct dlistint_t *next;
-} dlistint_t;
+/**
+ * print_dlistint - prints all the elements of a
+ * dlistint_t list
+ *
+ * @h: head of the list
+ * Return: the number of nodes
+ */
+size_t print_dlistint(const dlistint_t *h)
+{
+	int count;
 
-size_t print_dlistint(const dlistint_t *h) {
-    size_t node_count = 0;
+	count = 0;
 
-    while (h != NULL) {
-        printf("%d\n", h->data);
-        h = h->next;
-        node_count++;
-    }
+	if (h == NULL)
+		return (count);
 
-    return node_count;
-}
+	while (h->prev != NULL)
+		h = h->prev;
 
-int main() {
-    // Example usage
-    dlistint_t node1 = {1, NULL, NULL};
-    dlistint_t node2 = {2, NULL, NULL};
-    dlistint_t node3 = {3, NULL, NULL};
+	while (h != NULL)
+	{
+		printf("%d\n", h->n);
+		count++;
+		h = h->next;
+	}
 
-    node1.next = &node2;
-    node2.prev = &node1;
-    node2.next = &node3;
-    node3.prev = &node2;
-
-    dlistint_t *head = &node1;
-
-    size_t count = print_dlistint(head);
-    printf("Number of nodes: %zu\n", count);
-
-    return 0;
+	return (count);
 }
