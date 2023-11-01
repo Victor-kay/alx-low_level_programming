@@ -1,0 +1,12 @@
+# Makefile for building the 'school' executable
+
+# Target: all (default target)
+all: school
+
+# Rule to build the 'school' executable
+school: main.c student.c teacher.c
+    gcc -o school main.c student.c teacher.c
+
+# Clean up the generated executable and object files
+clean:
+    rm -f school
